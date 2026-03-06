@@ -312,7 +312,7 @@ class NanotronLightevalModel(LightevalModel):
         self.batch_size = nanotron_config.lighteval_config.batch_size
 
         # Initialize cache for tokenization and predictions
-        self._cache = SampleCache(nanotron_config)
+        # self._cache = SampleCache(nanotron_config)
 
     @property
     def tokenizer(self):
