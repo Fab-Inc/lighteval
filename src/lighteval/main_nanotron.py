@@ -42,9 +42,14 @@ SEED = 1234
 @requires("nanotron")
 def nanotron(
     checkpoint_config_path: Annotated[
-        str, Option(help="Path to the nanotron checkpoint YAML or python config file, potentially on s3.")
+        str,
+        Option(
+            help="Path to the nanotron checkpoint YAML or python config file, potentially on s3."
+        ),
     ],
-    lighteval_config_path: Annotated[str, Option(help="Path to a YAML config to be used for the evaluation.")],
+    lighteval_config_path: Annotated[
+        str, Option(help="Path to a YAML config to be used for the evaluation.")
+    ],
     load_tasks_multilingual: load_tasks_multilingual.type = load_tasks_multilingual.default,
     remove_reasoning_tags: remove_reasoning_tags.type = remove_reasoning_tags.default,
     reasoning_tags: reasoning_tags.type = reasoning_tags.default,
@@ -52,7 +57,13 @@ def nanotron(
     """
     Evaluate models using nanotron as backend.
     """
-    from nanotron.config import GeneralArgs, ModelArgs, TokenizerArgs, get_config_from_dict, get_config_from_file
+    from nanotron.config import (
+        GeneralArgs,
+        ModelArgs,
+        TokenizerArgs,
+        get_config_from_dict,
+        get_config_from_file,
+    )
 
     from lighteval.logging.evaluation_tracker import EvaluationTracker
     from lighteval.models.nanotron.nanotron_model import (
@@ -75,12 +86,18 @@ def nanotron(
             skip_unused_config_keys=True,
             skip_null_keys=True,
         )
-        for key, config_class in [("model", ModelArgs), ("tokenizer", TokenizerArgs), ("general", GeneralArgs)]
+        for key, config_class in [
+            ("model", ModelArgs),
+            ("tokenizer", TokenizerArgs),
+            ("general", GeneralArgs),
+        ]
     ]
 
     # Load lighteval config
     lighteval_config: LightEvalConfig = get_config_from_file(lighteval_config_path, config_class=LightEvalConfig)  # type: ignore
-    nanotron_config = FullNanotronConfig(lighteval_config, model_config, tokenizer_config, general_config)
+    nanotron_config = FullNanotronConfig(
+        lighteval_config, model_config, tokenizer_config, general_config
+    )
 
     evaluation_tracker = EvaluationTracker(
         output_dir=lighteval_config.logging.output_dir,

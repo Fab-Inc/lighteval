@@ -68,6 +68,13 @@ if is_package_available("nanotron"):
     from nanotron import logging
     from nanotron.config import GeneralArgs, ModelArgs, TokenizerArgs
     from nanotron.config.parallelism_config import ParallelismArgs
+    from nanotron.config.lighteval_config import (
+        GenerationArgs,
+        LightEvalConfig,
+        LightEvalLoggingArgs,
+        LightEvalTasksArgs,
+        LightEvalSlurm,
+    )
     from nanotron.generation.decode import decode_tokenized
     from nanotron.generation.sampler import SamplerType
     from nanotron.logging import human_format, log_rank
@@ -129,19 +136,19 @@ class LightEvalTasksArgs:
     pairwise_tokenization: bool = False
 
 
-@dataclass
-class LightEvalConfig:
-    """Arguments related to running LightEval on checkpoints.
+# @dataclass
+# class LightEvalConfig:
+#     """Arguments related to running LightEval on checkpoints.
 
-    All is optional because you can also use this class to later supply arguments to override
-    the saved config when running LightEval after training.
-    """
+#     All is optional because you can also use this class to later supply arguments to override
+#     the saved config when running LightEval after training.
+#     """
 
-    logging: LightEvalLoggingArgs
-    tasks: LightEvalTasksArgs
-    parallelism: "ParallelismArgs"
-    batch_size: int = 0
-    generation: Optional[Union[GenerationArgs, Dict[str, GenerationArgs]]] = None
+#     logging: LightEvalLoggingArgs
+#     tasks: LightEvalTasksArgs
+#     parallelism: "ParallelismArgs"
+#     batch_size: int = 0
+#     generation: Optional[Union[GenerationArgs, Dict[str, GenerationArgs]]] = None
 
 
 @dataclass
