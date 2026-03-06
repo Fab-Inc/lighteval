@@ -28,9 +28,11 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, List, Set, Tuple, Union
+from dataclasses import asdict
 
 import pandas as pd
 from datasets import Dataset, load_dataset
+from pydantic import BaseModel
 
 from lighteval.models.abstract_model import ModelConfig
 from lighteval.models.model_output import ModelResponse
@@ -144,8 +146,11 @@ class SampleCache:
         Returns:
             str: A 16-character hexadecimal hash of the model configuration
         """
-        # Use Pydantic's model_dump instead of asdict for BaseModel
-        config_dict = model_config.model_dump()
+        if isinstance(model_config, BaseModel):
+            # Use Pydantic's model_dump instead of asdict for BaseModel
+            config_dict = model_config.model_dump()
+        else:
+            config_dict = asdict(model_config)
         config_str = json.dumps(config_dict, sort_keys=True, default=str)
         return hashlib.sha256(config_str.encode()).hexdigest()[:16]
 
