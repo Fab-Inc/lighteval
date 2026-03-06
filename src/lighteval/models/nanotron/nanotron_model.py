@@ -308,7 +308,7 @@ class NanotronLightevalModel(LightevalModel):
         self.input_pp_rank, self.output_pp_rank = get_min_max_rank(module=self.model)
 
         self.multichoice_continuations_start_space = multichoice_continuations_start_space
-        self.pairwise_tokenization = nanotron_config.lighteval_config.tasks.pairwise_tokenization
+        self.pairwise_tokenization = False
         self.batch_size = nanotron_config.lighteval_config.batch_size
 
         # Initialize cache for tokenization and predictions
