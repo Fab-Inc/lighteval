@@ -127,7 +127,10 @@ class GeneralConfigLogger:
             model_config: the model config used to initialize the model.
         """
         self.model_config = model_config
-        self.model_name = model_config.model_name
+        if hasattr(model_config, "model_name"):
+            self.model_name = model_config.model_name
+        else:
+            self.model_name = "0"
 
     def log_end_time(self) -> None:
         self.end_time = time.perf_counter()
