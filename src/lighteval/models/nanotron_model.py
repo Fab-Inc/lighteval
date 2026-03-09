@@ -678,6 +678,14 @@ class NanotronLightevalModel(LightevalModel):
             )
             to_remove_at_the_end = distributed_sampler.total_size - len(dataset)
 
+            data_collator = DataCollatorForCLMWithPositionIds(
+                sequence_length=max_context,
+                input_pp_rank=self.input_pp_rank,
+                output_pp_rank=self.output_pp_rank,
+                parallel_context=self.parallel_context,
+                use_doc_masking=True,
+            )
+
             dataloader = DataLoader(
                 dataset,
                 batch_size=batch_size,
@@ -709,14 +717,22 @@ class NanotronLightevalModel(LightevalModel):
                     inputs, padding_length=max_context, max_context=max_context, full_attention_masks=True
                 )
                 # batched_inputs, batch_attention, input_lengths, truncated, padded
-
-                out = self.model(input_ids=batch_model.input_ids, input_mask=batch_model.input_mask)
+                examples = [
+                    {"input_ids": input_ids_item.cpu()}
+                    for input_ids_item in batch_model.input_ids
+                ]
+                result = {
+                    key: torch.tensor(val, dtype=torch.long).to(self.device) for key, val in data_collator(examples).items()
+                    if key in ["input_ids", "position_ids"]
+                }
+                out = self.model(**result)
+                out = torch.reshape(out, (len(batch_data), max_context, -1))
 
                 if dist.get_rank(self.parallel_context.pp_pg) == self.output_pp_rank:
                     # This process got outputs
 
                     # Gather all the output accross TP
-                    out = out.transpose(0, 1).contiguous()  # [batch, seq_length, vocab]
+                    # out = out.transpose(0, 1).contiguous()  # [batch, seq_length, vocab]
 
                     gathered_out = [torch.zeros_like(out) for _ in range(self.parallel_context.tp_pg.size())]
                     dist.all_gather(gathered_out, out, group=self.parallel_context.tp_pg, async_op=False)
@@ -957,9 +973,8 @@ class NanotronLightevalModel(LightevalModel):
                     key: torch.tensor(val, dtype=torch.long).to(self.device) for key, val in data_collator(examples).items()
                     if key in ["input_ids", "position_ids"]
                 }
-                with torch.no_grad():
-                    out = self.model(**result)
-                    out = torch.reshape(out, (len(batch_data), max_context, -1))
+                out = self.model(**result)
+                out = torch.reshape(out, (len(batch_data), max_context, -1))
 
                 if dist.get_rank(self.parallel_context.pp_pg) == self.output_pp_rank:
                     # This process got outputs
