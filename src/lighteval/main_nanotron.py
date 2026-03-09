@@ -40,10 +40,17 @@ SEED = 1234
 
 def nanotron(
     checkpoint_config_path: Annotated[
-        str, Option(help="Path to the nanotron checkpoint YAML or python config file, potentially on s3.")
+        str,
+        Option(
+            help="Path to the nanotron checkpoint YAML or python config file, potentially on s3."
+        ),
     ],
-    lighteval_config_path: Annotated[str, Option(help="Path to a YAML config to be used for the evaluation.")],
-    cache_dir: Annotated[str, Option(help="Cache directory for datasets and models.")] = CACHE_DIR,
+    lighteval_config_path: Annotated[
+        str, Option(help="Path to a YAML config to be used for the evaluation.")
+    ],
+    cache_dir: Annotated[
+        str, Option(help="Cache directory for datasets and models.")
+    ] = CACHE_DIR,
 ):
     """
     Evaluate models using nanotron as backend.
@@ -80,12 +87,12 @@ def nanotron(
         nanotron_config = FullNanotronConfig(lighteval_config, model_config)
 
     evaluation_tracker = EvaluationTracker(
-        output_dir=lighteval_config.logging.output_dir,
-        hub_results_org=lighteval_config.logging.results_org,
-        public=lighteval_config.logging.public_run,
-        push_to_hub=lighteval_config.logging.push_to_hub,
-        push_to_tensorboard=lighteval_config.logging.push_to_tensorboard,
-        save_details=lighteval_config.logging.save_details,
+        output_dir=lighteval_config.logging.local_output_path,
+        # hub_results_org=lighteval_config.logging.results_org,
+        # public=lighteval_config.logging.public_run,
+        push_to_hub=lighteval_config.logging.push_results_to_hub,
+        push_to_tensorboard=lighteval_config.logging.push_results_to_tensorboard,
+        # save_details=lighteval_config.logging.save_details,
         tensorboard_metric_prefix=lighteval_config.logging.tensorboard_metric_prefix,
         nanotron_run_info=nanotron_config.nanotron_config.general,
     )

@@ -66,6 +66,7 @@ TokenSequence = Union[List[int], torch.LongTensor, torch.Tensor, BatchEncoding]
 if is_nanotron_available():
     from nanotron import distributed as dist
     from nanotron import logging
+    from nanotron.data.clm_collator import DataCollatorForCLMWithPositionIds
     from nanotron.generation.decode import decode_tokenized
     from nanotron.logging import human_format, log_rank
     from nanotron.models import build_model
@@ -212,7 +213,7 @@ class NanotronLightevalModel(LightevalModel):
         self.input_pp_rank, self.output_pp_rank = get_min_max_rank(module=self.model)
 
         self.multichoice_continuations_start_space = multichoice_continuations_start_space
-        self.pairwise_tokenization = nanotron_config.lighteval_config.tasks.pairwise_tokenization
+        self.pairwise_tokenization = False #nanotron_config.lighteval_config.tasks.pairwise_tokenization
 
         self.model_info = ModelInfo(
             model_name=f"{nanotron_config.nanotron_config.general.run}/{nanotron_config.nanotron_config.general.step}"
@@ -909,6 +910,14 @@ class NanotronLightevalModel(LightevalModel):
             )
             to_remove_at_the_end = distributed_sampler.total_size - len(dataset)
 
+            data_collator = DataCollatorForCLMWithPositionIds(
+                sequence_length=max_context,
+                input_pp_rank=self.input_pp_rank,
+                output_pp_rank=self.output_pp_rank,
+                parallel_context=self.parallel_context,
+                use_doc_masking=True,
+            )
+
             dataloader = DataLoader(
                 dataset,
                 batch_size=batch_size,
@@ -937,11 +946,20 @@ class NanotronLightevalModel(LightevalModel):
                     item.tokenized_context + item.tokenized_continuation[:-1] for item in batch_data
                 ]  # The last token doesn't need to be input in the model
                 batch_model = self.prepare_batch(
-                    inputs, padding_length=max_context, max_context=max_context, full_attention_masks=True
+                    inputs, padding_length=max_context+1, max_context=max_context+1, full_attention_masks=True
                 )
                 # batched_inputs, batch_attention, input_lengths, truncated, padded
+                examples = [
+                    {"input_ids": input_ids_item.cpu()}
+                    for input_ids_item in batch_model.input_ids
+                ]
+                result = {
+                    key: torch.tensor(val, dtype=torch.long).to(self.device) for key, val in data_collator(examples).items()
+                    if key in ["input_ids", "position_ids"]
+                }
                 with torch.no_grad():
-                    out = self.model(input_ids=batch_model.input_ids, input_mask=batch_model.input_mask)
+                    out = self.model(**result)
+                    out = torch.reshape(out, (len(batch_data), max_context, -1))
 
                 if dist.get_rank(self.parallel_context.pp_pg) == self.output_pp_rank:
                     # This process got outputs
@@ -951,7 +969,7 @@ class NanotronLightevalModel(LightevalModel):
                     dist.all_gather(gathered_out, out, group=self.parallel_context.tp_pg, async_op=False)
                     out = torch.cat(gathered_out, dim=-1)
 
-                    out = out.transpose(0, 1)  # [batch, seq_length, vocab]
+                    # out = out.transpose(0, 1)  # [batch, seq_length, vocab]
                     multi_logits = F.log_softmax(out, dim=-1)  # [batch, padding_length, vocab]
 
                     logits_sum = []
